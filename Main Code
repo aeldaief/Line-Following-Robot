@@ -1,0 +1,127 @@
+from spike import PrimeHub, LightMatrix, Button, StatusLight, ForceSensor, MotionSensor, Speaker, ColorSensor, App, DistanceSensor, Motor, MotorPair
+from spike.control import wait_for_seconds, wait_until, Timer
+from math import *
+
+hub = PrimeHub()
+
+hub.light_matrix.show_image('HAPPY')
+
+line_sensor = ColorSensor('F') # Initialize the Color Sensor
+motor_pair = MotorPair('A','B') # Initialize Motor Sensors
+
+print('hello world')
+
+# Calibrating color sensor for white, black and red
+white_reflection = line_sensor.get_reflected_light()
+print('White reflected light value ' + str(white_reflection))
+hub.light_matrix.show_image('HEART')
+wait_for_seconds(5)
+black_reflection = line_sensor.get_reflected_light()
+print('Black reflected light value ' + str(black_reflection))
+hub.light_matrix.show_image('HAPPY')
+wait_for_seconds(5)
+red_reflection = line_sensor.get_reflected_light()
+print('Red reflected light value ' + str(red_reflection))
+hub.light_matrix.show_image('HEART')
+wait_for_seconds(5)
+
+# Function to follow black line using proportional control
+def follow_line_P(black, white):
+    # intialize color & motor sensors
+    line_sensor = ColorSensor('F')
+    motor_pair = MotorPair('A','B')
+    dist_sensor = DistanceSensor('E') # ultrasonic sensor
+
+    # Drive speed
+    speed = 10
+
+    # find target value
+    target = (black + white) / 2
+
+    # set constant
+    K_p = 0.15
+
+    # initialize integral, derivative, and last_error values
+    proportional = 0
+    last_error = 0
+
+    while True:
+
+        if line_sensor.get_color() == 'red' or line_sensor.get_color() == 'yellow':
+            break
+
+        # find error
+        color = line_sensor.get_reflected_light()
+        # print(color)
+        error = color - target
+        # print('error ' + str(error))
+
+        # proportional value
+        scaled_proportional = error * K_p
+
+        # Proportional function
+        correction = scaled_proportional 
+
+        motor_pair.start_tank(int(speed + correction), int(1.5*(speed - correction)))
+
+# Function to follow red line using proportional control
+def follow_line_P_RED(red, white):
+    # intialize color & motor sensors
+    line_sensor = ColorSensor('F') 
+    motor_pair = MotorPair('A','B')
+    dist_sensor = DistanceSensor('E') # ultrasonic sensor
+
+    # Drive speed
+    speed = 10
+
+    # find target value
+    target = (red + white) / 2
+
+    # set constants
+    K_p = 0.15
+
+    # initialize integral, derivative, and last_error values
+    proportional = 0
+    last_error = 0        
+
+    while True:
+
+        if line_sensor.get_color() == 'black' or line_sensor.get_color() == 'yellow':
+            break
+
+        # find error
+        color = line_sensor.get_reflected_light()
+        # print(color)
+        error = color - target
+        # print('error ' + str(error))
+
+        # proportional value
+        scaled_proportional = error * K_p 
+
+        # Proportional function
+        correction = scaled_proportional 
+
+        motor_pair.start_tank(int(speed + correction), int(1.5*(speed - correction)))
+
+
+# Main loop
+while True:
+    STATE = line_sensor.get_color()
+
+    if (STATE == 'white'):
+        follow_line_P(black_reflection, white_reflection)
+    elif (STATE == 'black'):
+        follow_line_P(black_reflection, white_reflection)
+    elif (STATE == 'yellow'):
+        motor_pair.stop()
+        wait_for_seconds(10)
+        motor_pair.move(5, 'cm',-60, 10)
+    elif (STATE == 'red'):
+        motor_pair.stop()
+        wait_for_seconds(2)
+        motor_pair.move(2, 'cm', steering=0, speed=25)
+        motor_pair.move(4, 'cm', steering=250, speed=25)
+        follow_line_P(red_reflection, white_reflection)
+    else:
+        motor_pair.stop()
+        break
